@@ -3,6 +3,10 @@ import pandas as pd
 from collections import Counter
 import json
 
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
 # https://store.steampowered.com/api/appdetails?appids=2519060
 # this api lets you see all information about a game
 
@@ -26,6 +30,13 @@ process the reviews and remove superfluous reviews. bad review indicators to be 
 '''
 base_url = "https://store.steampowered.com"
 
+# set up stop words
+nltk.download('punkt')
+nltk.download('stopwords')
+stop_words = set(stopwords.words('english'))
+stop_words.update(['game', 'play', 'player', 'players',  'playing', 'gameplay', 'still', 'https'])
+print(stop_words)
+
 def display_results(results):
     print(f"Total reviews analyzed: {results['total_reviews']}")
     print(f"Positive reviews: {results['positive_reviews']} ({results['positive_percentage']:.2f}%)")
@@ -40,10 +51,16 @@ def analyze_reviews(reviews: list):
     positive_reviews = len(df[df['voted_up'] == True])
     negative_reviews = len(df[df['voted_up'] == False])
 
-    # Most common words in reviews
-    all_words = ' '.join(df['review']).lower().split()
+    # Most common words in reviews, parsed with stop words
+    all_words = []
+    for review in df['review']:
+        tokens = word_tokenize(review.lower())
+        all_words.extend([word for word in tokens if word.isalnum() and word not in stop_words])
+        
     word_counts = Counter(all_words)
-    most_common_words = word_counts.most_common(10)
+    print(word_counts)
+    most_common_words = word_counts.most_common(20)  # Increased to 20 as we're filtering out more words
+        
 
 
     return {
