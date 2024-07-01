@@ -1,5 +1,8 @@
 import requests
-from tabulate import tabulate
+import pandas as pd
+from collections import Counter
+import json
+
 # https://store.steampowered.com/api/appdetails?appids=2519060
 # this api lets you see all information about a game
 
@@ -21,6 +24,35 @@ review script:
 quick look at reviews
 process the reviews and remove superfluous reviews. bad review indicators to be decided.
 '''
+base_url = "https://store.steampowered.com"
+
+def display_results(results):
+    print(f"Total reviews analyzed: {results['total_reviews']}")
+    print(f"Positive reviews: {results['positive_reviews']} ({results['positive_percentage']:.2f}%)")
+    print(f"Negative reviews: {results['negative_reviews']}")
+    print("\nMost common words in reviews:")
+    for word, count in results['most_common_words']:
+        print(f"{word}: {count}")
+
+def analyze_reviews(reviews: list):
+    df = pd.DataFrame(reviews)
+    total_reviews = len(df)
+    positive_reviews = len(df[df['voted_up'] == True])
+    negative_reviews = len(df[df['voted_up'] == False])
+
+    # Most common words in reviews
+    all_words = ' '.join(df['review']).lower().split()
+    word_counts = Counter(all_words)
+    most_common_words = word_counts.most_common(10)
+
+
+    return {
+        "total_reviews": total_reviews,
+        "positive_reviews": positive_reviews,
+        "negative_reviews": negative_reviews,
+        "positive_percentage": (positive_reviews / total_reviews) * 100 if total_reviews > 0 else 0,
+        "most_common_words": most_common_words
+    }
 
 def main():
     while True:
@@ -33,7 +65,7 @@ def main():
 
         if command == 'find': 
             # Construct the API URL
-            url = f'https://steamcommunity.com/actions/SearchApps/{user_input}'
+            url = f'{base_url}/actions/SearchApps/{user_input}'
 
             response = requests.get(url)
 
@@ -43,13 +75,12 @@ def main():
                 data = response.json()
                 for item in data:
                     print('{:<50s}{:>12s}'.format(item["name"], item["appid"]))
-                # Now you can work with the data
             else:
                 print('Failed to retrieve data')
 
         if command == 'get': 
             # Construct the API URL
-            url = f'https://store.steampowered.com/appreviewhistogram/{user_input}?l=english'
+            url = f'{base_url}/appreviewhistogram/{user_input}?l=english'
             url = url.replace('+', '%2B')
 
             response = requests.get(url)
@@ -58,13 +89,13 @@ def main():
             if response.status_code == 200:
                 print('Success!')
                 data = response.json()
-                print(data)
-                # Now you can work with the data
             else:
                 print('Failed to retrieve data')
         
         if command == 'batch':
-            url = f'https://store.steampowered.com/appreviews/{user_input}?json=1'
+            reviews = []
+
+            url = f'{base_url}/appreviews/{user_input}?json=1'
 
             response = requests.get(url)
             data = response.json()
@@ -72,16 +103,11 @@ def main():
             if response.status_code == 200:
                 positive_count = 0
                 negative_count = 0
-                # print(data)
 
                 cursor = response.json()['cursor']
-                while cursor is not None:
-                    for item in response.json()['reviews']:
-                        if item['voted_up']:
-                            positive_count += 1
-                        else:
-                            negative_count += 1
-                    
+                while cursor is not None and len(reviews) < 100:
+                    reviews.extend(data["reviews"])
+
                     url = f'https://store.steampowered.com/appreviews/{user_input}?json=1&cursor={cursor}'
                     url = url.replace('+', '%2B')
                     
@@ -94,7 +120,7 @@ def main():
                     else:
                         print('Failed to retrieve data, stopping process')
                         break
-                print('Review Ratio:    {:<8d}{:>8d}'.format(positive_count, negative_count))
+                display_results(analyze_reviews(reviews))
             else:
                 print('Failed to retrieve data')
 
