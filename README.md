@@ -32,14 +32,15 @@ This Python script aggregates Steam game reviews using the Steam API and analyze
    ```
    python script.py
    ```
-2. Enter the AppID of the Steam game when prompted
-3. View the analysis results in the console output
-
-## Configuration
-
-- Modify `MAX_REVIEWS` in the script to change the number of reviews fetched
-- Adjust `MIN_WORD_LENGTH` to filter out shorter words
-- Edit `COMMON_WORDS` list to exclude additional words from the analysis
+2. Use find to get the App ID of a game by searching its name:
+   ```
+   find [game name]
+   ```
+3. Use batch to run the aggregator and fetch information about steam reviews and common words/phrases:
+   ```
+   batch [appid]
+   ```
+4. View the analysis results in the console output
 
 ## License
 
